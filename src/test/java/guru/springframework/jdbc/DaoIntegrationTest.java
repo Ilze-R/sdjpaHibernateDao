@@ -1,7 +1,11 @@
 package guru.springframework.jdbc;
 
 import guru.springframework.jdbc.dao.AuthorDao;
+import guru.springframework.jdbc.dao.BookDao;
 import guru.springframework.jdbc.domain.Author;
+import guru.springframework.jdbc.domain.Book;
+import net.bytebuddy.utility.RandomString;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -10,12 +14,14 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-/**
- * Created by jt on 8/28/21.
- */
+
 @ActiveProfiles("local")
 @DataJpaTest
 @ComponentScan(basePackages = {"guru.springframework.jdbc.dao"})
@@ -24,7 +30,10 @@ public class DaoIntegrationTest {
     @Autowired
     AuthorDao authorDao;
 
-//    @Autowired
+    @Autowired
+    BookDao bookDao;
+
+    //    @Autowired
 //    BookDao bookDao;
 //
 //    @Test
@@ -92,6 +101,36 @@ public class DaoIntegrationTest {
 //
 //        assertThat(book.getId()).isNotNull();
 //    }
+    @Test
+    void testFindAllAuthors() {
+        List<Author> authors = authorDao.findAll();
+
+        assertThat(authors).isNotNull();
+        assertThat(authors.size()).isGreaterThan(0);
+
+    }
+
+    @Test
+    void testFindBookByISBN() {
+        Book book = new Book();
+        book.setIsbn("1234" + RandomString.make());
+        book.setTitle("ISBN TEST");
+
+        Book saved = bookDao.saveNewBook(book);
+
+        Book fetched = bookDao.findByISBN(book.getIsbn());
+        assertThat(fetched).isNotNull();
+    }
+
+    @Test
+    void testListAuthorByLastNameLike() {
+        List<Author> authors = authorDao.listAuthorByLastNameLike("Wall");
+
+        Assertions.assertNotEquals(authors, null);
+        assertThat(authors.size()).isGreaterThan(0);
+
+
+    }
 
     @Test
     void testDeleteAuthor() {
@@ -103,9 +142,9 @@ public class DaoIntegrationTest {
 
         authorDao.deleteAuthorById(saved.getId());
 
-        assertThrows(EmptyResultDataAccessException.class, () -> {
-            Author deleted = authorDao.getById(saved.getId());
-        });
+        Author deleted = authorDao.getById(saved.getId());
+        Assertions.assertNull(deleted);
+
 
     }
 
@@ -120,7 +159,8 @@ public class DaoIntegrationTest {
         saved.setLastName("Thompson");
         Author updated = authorDao.updateAuthor(saved);
 
-        assertThat(updated.getLastName()).isEqualTo("Thompson");
+        Assertions.assertEquals(updated.getLastName(), "Thompson");
+        //assertThat(updated.getLastName()).isEqualTo("Thompson");
     }
 
     @Test
@@ -130,7 +170,8 @@ public class DaoIntegrationTest {
         author.setLastName("Thompson");
         Author saved = authorDao.saveNewAuthor(author);
 
-        assertThat(saved).isNotNull();
+        Assertions.assertNotNull(saved);
+        Assertions.assertNotNull(saved.getId());
     }
 
     @Test
@@ -145,7 +186,21 @@ public class DaoIntegrationTest {
 
         Author author = authorDao.getById(1L);
 
-        assertThat(author).isNotNull();
+        Assertions.assertNotNull(author);
 
+    }
+
+    @Test
+    void testGetAuthorByNameCriteria() {
+        Author author = authorDao.findAuthorByCriteria("Craig", "Walls");
+
+        assertThat(author).isNotNull();
+    }
+
+    @Test
+    void testGetAuthorByNameNative() {
+        Author author = authorDao.findAuthorByNameNative("Craig", "Walls");
+
+        assertThat(author).isNotNull();
     }
 }
